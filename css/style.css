@@ -1,1 +1,25 @@
 /* Stylesheet by Geri Rosenberg, 2019 */
+
+.countiesbg {
+	fill: #CDD1D6;
+	stroke: #FFF;
+	stroke-width: 1px;
+}
+
+.statelines {
+	fill: none;
+	stroke: #FFF;
+	stroke-width: 3px;
+}
+
+.countylines {
+	fill: none;
+	stroke: #FFF;
+	stroke-width: 1px;
+}
+
+.gratLines {
+	fill: none;
+	stroke: #999;
+	stroke-width: 1px;
+}
