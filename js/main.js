@@ -4,7 +4,7 @@
 (function(){
 
 	// psuedo-global variables
-	var attrArray = ["under_15_minutes", "15_to_29_minutes", "30_to_59_minutes", "60_to_89_minutes", "90_plus_minutes"]
+	var attrArray = ["drive_alone", "carpool", "public_transit", "bicycle", "walk", "work_from_home"]
 
 	// initial attribute
 	var expressed = attrArray[0];
@@ -50,7 +50,7 @@
 		// use queue to parallelize asynchronous data loading
 		d3.queue()
 			// load attributes from csv
-			.defer(d3.csv, "data/traveltime.csv")
+			.defer(d3.csv, "data/income_dist.csv")
 			// load background spatial data
 			.defer(d3.json, "data/allcounties.topojson")
 			// load choropleth spatial data
@@ -286,7 +286,7 @@
 		var titleOption = dropdown.append("option")
 			.attr("class", "titleOption")
 			.attr("disabled", "true")
-			.text("Select commute length");
+			.text("Select transportation to work");
 
 		// add attribute value name options
 		var attrOptions = dropdown.selectAll("attrOptions")
@@ -328,7 +328,7 @@
 				return i * 20
 			})
 			.duration(500);
-		
+
 		updateChart(bars, csvData.length, colorScale);
 	};
 
@@ -355,7 +355,7 @@
 
 		// add text to chart title
 		var chartTitle = d3.select(".chartTitle")
-			// create a string that includes the 4th character of the current attribute name
+			// create a string that includes the current attribute name
 			.text("Percent " + expressed);
 	}
 })();
