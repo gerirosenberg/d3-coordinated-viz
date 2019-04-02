@@ -1,4 +1,4 @@
-Id2,Geography,under_15_percent,15_to_29_percent,30_to_59_percent,60_to_89_percent,90_plus_percent
+GEOID,Geography,under_15_minutes,15_to_29_minutes,30_to_59_minutes,60_to_89_minutes,90_plus_minutes
 11001000100,"Census Tract 1, Washington, District of Columbia",16.7,48.3,30.0,3.7,1.2
 11001000201,"Census Tract 2.01, Washington, District of Columbia",77.0,14.3,7.7,0.0,1.0
 11001000202,"Census Tract 2.02, Washington, District of Columbia",33.0,41.6,22.0,1.5,1.8
