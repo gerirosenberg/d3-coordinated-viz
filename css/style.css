@@ -69,15 +69,28 @@
 	opacity: 0.8;
 }
 
-.tooltip {
+.infolabel {
 	position: absolute;
-	width: 200px;
-	height: 28px;
-	font-size: .8em;
-	font-style: bold;
-	font-family: sans-serif;
-	pointer-events: none;
-	text-shadow: -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+	min-width: 100px;
+	min-height: 50px;
+	color: #fff;
+	background-color: #000;
+	border: solid thin #fff;
+	padding: 5px 10px;
+	top: -75px;
+}
+
+.infolabel h1 {
+	margin: 0 20px 0 0;
+	padding: 0;
+	display: inline-block;
+	line-height: 1em;
+}
+
+.infolabel h2{
+	font-size: 0.8em;
+	padding: 0;
+	line-height: 0.2em;
 }
 
 .numbers {

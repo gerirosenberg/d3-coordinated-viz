@@ -4,7 +4,8 @@
 (function(){
 
 	// psuedo-global variables
-	var attrArray = ["drive_alone", "carpool", "public_transit", "bicycle", "walk", "work_from_home"]
+	var attrArray = ["drive_alone", "carpool", "public_transit", "bicycle", "walk", "work_from_home"];
+	var infoArray = ["median_income", "distance_to_metro"];
 
 	// initial attribute
 	var expressed = attrArray[0];
@@ -146,6 +147,21 @@
 						geojsonProps[attr] = val;
 					});
 				};
+
+				// where primary keys match, transfer csv infodata to geojson properties object
+				if (geojsonKey === csvKey){
+
+					// assign all attributes and values
+					infoArray.forEach(function(info){
+
+						// get csv attribute value
+						var val = parseFloat(csvTract[info]);
+
+						// assign attribute and value to geojson properties
+						geojsonProps[info] = val;
+					});
+
+				};
 			};
 		};
 		return allTracts;
@@ -158,12 +174,25 @@
 			.enter()
 			.append("path")
 			.attr("class", function(d){
-				return "censustracts " + d.properties.GEOID;
+				return "censustracts id" + d.properties.GEOID;
 			})
 			.attr("d", path)
 			.style("fill", function(d){
 				return choropleth(d.properties, colorScale);
-			});
+			})
+
+			// event listeners
+			.on("mouseover", function(d){
+				highlightTracts(d.properties);
+			})
+			.on("mouseout", function(d){
+				dehighlightTracts(d.properties);
+			})
+			.on("mousemove", moveLabel);
+
+		// add style descriptor to each path
+		var desc = censustracts.append("desc")
+			.text('{"stroke": "#000", "stroke-width": "0.5px"}');
 	};
 
 	// function to create color scale generator
@@ -265,7 +294,9 @@
 		var dots = chart.selectAll(".dot")
 			.data(csvData)
 			.enter().append("circle")
-				.attr("class", "dot")
+				.attr("class", function(d) {
+					return "dot id" + Object.values(d)[0];
+				})
 				.attr("r", 3.5)
 				.attr("cx", xMap)
 				.attr("cy", yMap)
@@ -278,19 +309,18 @@
 					if (xValue(d) === 0) {return "none"};
 				})
 
-				.on("mouseover", function(d) {
-					tooltip.transition()
-						.duration(200)
-						.style("opacity", .9);
-					tooltip.html(d["Geography"] + "<br/> ($" + (1000 * xValue(d)) + ", " + yValue(d) + "%)")
-						.style("left", (d3.event.pageX + 5) + "px")
-						.style("top", (d3.event.pageY - 28) + "px");
+				// event listeners
+				.on("mouseover", function(d){
+					highlightDots(d);
 				})
-				.on("mouseout", function(d) {
-					tooltip.transition()
-						.duration(500)
-						.style("opacity", 0);
-				});
+				.on("mouseout", function(d){
+					dehighlightDots(d);
+				})
+				.on("mousemove", moveLabel);
+		
+		// add style descriptor to each rect
+		var desc = dots.append("desc")
+			.text('{"stroke": "none", "stroke-width": "0px"}');
 
 		// create a text element for the chart title
 		var chartTitle = chart.append("text")
@@ -361,7 +391,7 @@
 		updateChart(dots, colorScale);
 	};
 
-	// // position, size, and color dots in chart
+	// position, size, and color dots in chart
 	function updateChart(dots, colorScale){
 
 		dots.attr("cx", xMap)
@@ -375,4 +405,163 @@
 			// create a string that includes the current attribute name
 			.text("Percent " + expressed)
 	}
+
+	// function to highlight tracts
+	function highlightTracts(props){
+
+		// change stroke
+		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
+			.style("stroke", "magenta")
+			.style("stroke-width", "2");
+
+		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
+			.style("stroke", "magenta")
+			.style("stroke-width", "1");
+
+		setTractLabel(props);
+	};
+
+	// function to highlight dots
+	function highlightDots(props){
+
+		// change stroke
+		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
+			.style("stroke", "magenta")
+			.style("stroke-width", "2");
+
+		var selectedDots = d3.selectAll(".dot.id" + Object.values(props)[0])
+			.style("stroke", "magenta")
+			.style("stroke-width", "1");
+
+		setDotLabel(props);
+	};
+
+	// function to reset the tract style on mouseout
+	function dehighlightTracts(props){
+		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
+			.style("stroke", function(){
+				return getStyle(this, "stroke")
+			})
+			.style("stroke-width", function(){
+				return getStyle(this, "stroke-width")
+			});
+
+		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
+			.style("stroke", "#000")
+			.style("stroke-width", "1");
+
+		function getStyle(element, styleName){
+			var styleText = d3.select(element)
+				.select("desc")
+				.text();
+
+			var styleObject = JSON.parse(styleText);
+
+			return styleObject[styleName];
+		};
+
+		// remove infolabel
+		d3.select(".infolabel")
+			.remove();
+	};
+
+	// function to reset the dot style on mouseout
+	function dehighlightDots(props){
+		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
+			.style("stroke", function(){
+				return getStyle(this, "stroke")
+			})
+			.style("stroke-width", function(){
+				return getStyle(this, "stroke-width")
+			});
+
+		var selectedDots = d3.selectAll(".dot.id" + Object.values(props)[0])
+			.style("stroke", "#000")
+			.style("stroke-width", "1");
+
+		function getStyle(element, styleName){
+			var styleText = d3.select(element)
+				.select("desc")
+				.text();
+
+			var styleObject = JSON.parse(styleText);
+
+			return styleObject[styleName];
+		};
+
+		// remove infolabel
+		d3.select(".infolabel")
+			.remove();
+	};
+
+	// function to create dynamic tract labels
+	function setTractLabel(props){
+
+		// change undefined income to ?
+		var income = Math.round(1000 * props["median_income"]) || String("?");
+
+		// label content
+	 	var labelAttribute = "<h1>" + props[expressed] + "%</h1><b>" + expressed + "</b><br/><h2>$" + income + " median income (" + props.NAMELSAD + ")</h2>"
+		 	// hide median income where unavailable
+
+	 	// create info label div
+	 	var infolabel = d3.select("body")
+	 		.append("div")
+	 		.attr("class", "infolabel")
+	 		.attr("id", props.GEOID + "_label")
+	 		.html(labelAttribute);
+
+	 	var tractName = infolabel.append("div")
+	 		.attr("class", "labelname")
+	 		.html(props.name); 	
+	};
+
+	// function to create dynamic dot labels
+	function setDotLabel(props){
+
+		// pare down tract name
+		var longTract = props["Geography"];
+		var shortTract = longTract.substr(0, longTract.indexOf(","));
+
+		// label content
+	 	var labelAttribute = "<h1>" + yValue(props) + "%</h1><b>" + expressed + "</b><br/><h2>$" + Math.round(1000 * xValue(props)) + " median income (" + shortTract + ")</h2>";
+
+	 	// create info label div
+	 	var infolabel = d3.select("body")
+	 		.append("div")
+	 		.attr("class", "infolabel")
+	 		.attr("id", Object.values(props)[0] + "_label")
+	 		.html(labelAttribute);
+
+	 	var tractName = infolabel.append("div")
+	 		.attr("class", "labelname")
+	 		.html(props.name);
+	};
+
+	// function to move infolabel with mouse
+	function moveLabel(){
+
+		// get width of label
+		var labelWidth = d3.select(".infolabel")
+			.node()
+			.getBoundingClientRect()
+			.width;
+
+		// use coordinates of mousemove event to set label coordinates
+		var x1 = d3.event.clientX + 10,
+			y1 = d3.event.clientY - 75,
+			x2 = d3.event.clientX - labelWidth - 10,
+			y2 = d3.event.clientY + 25;
+
+		// horizontal label coordinate, testing for overflow
+		var x = d3.event.clientX > window.innerWidth - labelWidth - 20 ? x2 : x1;
+
+		// vertical label coordinate, testing for overflow
+		var y = d3.event.clientY < 75 ? y2 : y1;
+
+		d3.select(".infolabel")
+			.style("left", x + "px")
+			.style("top", y + "px");
+	};
+
 })();
