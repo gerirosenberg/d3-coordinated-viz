@@ -10,13 +10,22 @@
 	var expressed = attrArray[0];
 
 	// chart frame dimensons
-	var chartWidth = window.innerWidth * 0.425,
-		chartHeight = 460;
+	var margin = {top: 20, right: 20, bottom: 30, left: 40},
+		chartWidth = window.innerWidth * 0.425 - margin.left - margin.right,
+		chartHeight = 473 - margin.top - margin.bottom;
 
-	// set scale to size bars proportionally to frame
-	var yScale = d3.scale.linear()
-		.range([0, chartHeight])
-		.domain([0, 105]);
+	// set chart scales
+	xScale = d3.scale.linear()
+		.range([0, chartWidth]),
+	yScale = d3.scale.linear()
+		.range([chartHeight, 0]);
+
+
+	// setup x and y values
+	var xValue = function(d) { return Number(d.median_income);},
+		xMap = function(d) { return xScale(xValue(d));},
+		yValue = function(d) { return Number(d[expressed]);},
+		yMap = function(d) { return yScale(yValue(d));};
 
 	// begin script when window loads
 	window.onload = setMap();
@@ -200,64 +209,88 @@
 	// function to create coordinated bar chart
 	function setChart(csvData, colorScale){
 
-		// create a second svg element to hold the bar chart
+		// create a second svg element to hold the chart
 		var chart = d3.select("body")
 			.append("svg")
-			.attr("width", chartWidth)
-			.attr("height", chartHeight)
-			.attr("class", "chart");
+				.attr("width", chartWidth + margin.left + margin.right)
+				.attr("height", chartHeight + margin.top + margin.bottom)
+				.attr("class", "chart")
+			.append("g")
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-		// set bars for each tract
-		var bars = chart.selectAll(".bars")
+		// add the tooltip area to the page
+		var tooltip = d3.select("body").append("div")
+			.attr("class", "tooltip")
+			.style("opacity", 0);
+
+		// setup chart x
+		var xAxis = d3.svg.axis()
+				.scale(xScale)
+				.orient("bottom");
+
+		// setup chart y
+		var yAxis = d3.svg.axis()
+				.scale(yScale)
+				.orient("left");
+
+		// buffer to avoid overlap of axes
+		xScale.domain([d3.min(csvData, xValue)-1, d3.max(csvData, xValue)+1]);
+		yScale.domain([d3.min(csvData, yValue), d3.max(csvData, yValue)]);
+
+		// add x-axis
+		chart.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0," + chartHeight + ")")
+				.call(xAxis)
+			.append("text")
+				.attr("class", "label")
+				.attr("x", chartWidth)
+				.attr("y", -6)
+				.style("text-anchor", "end")
+				.text("Median Income ($1000s)");
+
+		// add y-axis
+		chart.append("g")
+				.attr("class", "y axis")
+				.call(yAxis)
+			.append("text")
+				.attr("class", "label")
+				.attr("transform", "rotate(-90)")
+				.attr("y", 6)
+				.attr("dy", ".71em")
+				.style("text-anchor", "end")
+				.text("Percent of commuters");
+
+		// draw dots
+		var dots = chart.selectAll(".dot")
 			.data(csvData)
-			.enter()
-			.append("rect")
+			.enter().append("circle")
+				.attr("class", "dot")
+				.attr("r", 3.5)
+				.attr("cx", xMap)
+				.attr("cy", yMap)
+				.style("fill", function(d){
+					return choropleth(d, colorScale);
+				})
 
-			// sort from largest to smallest
-			.sort(function(a, b){
-				return b[expressed] - a[expressed]
-			})
+				// hide tracts where median income is unavailable
+				.style("display", function(d){
+					if (xValue(d) === 0) {return "none"};
+				})
 
-			// create bars
-			.attr("class", function(d){
-				return "bars " + d.GEOID;
-			})
-
-			// bar width
-			.attr("width", chartWidth / (csvData.length - 1))
-
-		// // annotate bars with attribute value text
-		// var numbers = chart.selectAll(".numbers")
-		// 	.data(csvData)
-		// 	.enter()
-		// 	.append("text")
-
-		// 	// sort from smallest to largest
-		// 	.sort(function(a, b){
-		// 		return a[expressed] - b[expressed]
-		// 	})
-
-		// 	// create labels
-		// 	.attr("class", function(d){
-		// 		return "numbers " + GEOID;
-		// 	})
-		// 	.attr("text-anchor", "middle")
-
-		// 	// centers labels to each bar
-		// 	.attr("x", function(d, i){
-		// 		var fraction = chartWidth / csvData.length;
-		// 		return i * fraction + (fraction - 1) / 2;
-		// 	})
-
-		// 	// locate labels inside each bar
-		// 	.attr("y", function(d){
-		// 		return chartHeight - yScale(parseFloat(d[expressed])) + 15;
-		// 	})
-
-		// 	// place the expressed value in each <text> element
-		// 	.text(function(d){
-		// 		return d[expressed];
-		// 	});
+				.on("mouseover", function(d) {
+					tooltip.transition()
+						.duration(200)
+						.style("opacity", .9);
+					tooltip.html(d["Geography"] + "<br/> ($" + (1000 * xValue(d)) + ", " + yValue(d) + "%)")
+						.style("left", (d3.event.pageX + 5) + "px")
+						.style("top", (d3.event.pageY - 28) + "px");
+				})
+				.on("mouseout", function(d) {
+					tooltip.transition()
+						.duration(500)
+						.style("opacity", 0);
+				});
 
 		// create a text element for the chart title
 		var chartTitle = chart.append("text")
@@ -265,8 +298,8 @@
 			.attr("y", 40)
 			.attr("class", "chartTitle")
 
-		// set bar positions, heights, and colors
-		updateChart(bars, csvData.length, colorScale);
+		// set dot positions and colors
+		updateChart(dots, colorScale);
 	};
 
 	// function to create a dropdown menu for attribute selection
@@ -314,48 +347,32 @@
 				return choropleth(d.properties, colorScale)
 			});
 
-		// re-sort, resize, and recolor bars
-		var bars = d3.selectAll(".bar")
+		// re-position y-value and recolor dots
+		var dots = d3.selectAll(".dot")
 
-			// re-sort
-			.sort(function(a, b){
-				return b[expressed] - a[expressed];
-			})
+			//re-position y-value
+			.attr("cy", yValue[expressed])
 
-			// add animation
-			.transition()
-			.delay(function(d, i){
-				return i * 20
-			})
-			.duration(500);
-
-		updateChart(bars, csvData.length, colorScale);
-	};
-
-	// // position, size, and color bars in chart
-	function updateChart(bars, n, colorScale){
-
-		// position bars
-		bars.attr("x", function(d, i){
-			return i * (chartWidth / n);
-		})
-
-			// size/resize bars
-			.attr("height", function(d){
-				return yScale(parseFloat(d[expressed]));
-			})
-			.attr("y", function(d){
-				return chartHeight - yScale(parseFloat(d[expressed]));
-			})
-
-			// color/recolor bars
+			// recolor dots
 			.style("fill", function(d){
 				return choropleth(d, colorScale);
 			});
 
+		updateChart(dots, colorScale);
+	};
+
+	// // position, size, and color dots in chart
+	function updateChart(dots, colorScale){
+
+		dots.attr("cx", xMap)
+			.attr("cy", yMap)
+			.style("fill", function(d){
+				return choropleth(d, colorScale);
+			})
+
 		// add text to chart title
 		var chartTitle = d3.select(".chartTitle")
 			// create a string that includes the current attribute name
-			.text("Percent " + expressed);
+			.text("Percent " + expressed)
 	}
 })();
