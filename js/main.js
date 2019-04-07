@@ -4,7 +4,7 @@
 (function(){
 
 	// psuedo-global variables
-	var attrArray = ["drive_alone", "carpool", "public_transit", "bicycle", "walk", "work_from_home"];
+	var attrArray = ["drive_alone", "carpool", "ride_public_transit", "bicycle", "walk", "work_from_home"];
 	var infoArray = ["median_income"];
 
 	// initial attribute
@@ -79,21 +79,29 @@
 			.defer(d3.json, "data/countyoutlines.topojson")
 			// load state outlines
 			.defer(d3.json, "data/stateoutlines.topojson")
+			// load metro lines
+			.defer(d3.json, "data/metro.topojson")
 			.await(callback);
 
 		// add callback function
-		function callback(error, csvData, counties, dctracts, countyOutlines, stateOutlines){
+		function callback(error, csvData, counties, dctracts, countyOutlines, stateOutlines, metroLines){
 
 			// translate topoJSON
 			var allCounties = topojson.feature(counties, counties.objects.dccounties),
 				allTracts = topojson.feature(dctracts, dctracts.objects.tracts).features,
 				linesCounties = topojson.feature(countyOutlines, countyOutlines.objects.countylines),
 				linesStates = topojson.feature(stateOutlines, stateOutlines.objects.states);
+				lineMetro = topojson.feature(metroLines, metroLines.objects.Metro_Lines_Regional)
 
 			// add counties to map background
 			var countiesbg = map.append("path")
 				.datum(allCounties)
 				.attr("class", "countiesbg")
+				.attr("d", path);
+
+			var metrobg = map.append("path")
+				.datum(lineMetro)
+				.attr("class", "metrolines")
 				.attr("d", path);
 
 			// add county labels to map
@@ -124,15 +132,40 @@
 				.attr("class", "statelines")
 				.attr("d", path);
 
-			// add legend background
+			// add legend background and title
 			map.append("rect")
-					.attr("x", width - 68)
-					.attr("y", 3)
-					.attr("width", 65)
-					.attr("height", 94)
-					.style("fill", "#FFF")
-					.style("opacity", "0.4")
-					.style("z-index", 95)
+				.attr("x", width - 98)
+				.attr("y", 0)
+				.attr("width", 98)
+				.attr("height", 140)
+				.style("fill", "#FFF")
+				.style("opacity", "0.4")
+				.style("z-index", 95)
+
+			map.append("text")
+				.attr("x", width-90)
+				.attr("y", 16)
+				.style("font-weight", "bold")
+				.style("font-family", "sans-serif")
+				.style("font-size", "0.8em")
+				.text("Percent of")
+
+			map.append("text")
+				.attr("x", width-90)
+				.attr("y", 28)
+				.style("font-weight", "bold")
+				.style("font-family", "sans-serif")
+				.style("font-size", "0.8em")
+				.text("commuters in")
+
+			map.append("text")
+				.attr("x", width-90)
+				.attr("y", 43)
+				.style("font-weight", "bold")
+				.style("font-family", "sans-serif")
+				.style("font-size", "0.8em")
+				.text("census tract")
+
 
 			// make legend squares
 			var size = 15
@@ -140,8 +173,8 @@
 				.data(colorClasses)
 				.enter()
 				.append("rect")
-					.attr("x", width - 60)
-					.attr("y", function(d,i){ return 13 + i*(size)})
+					.attr("x", width - 80)
+					.attr("y", function(d,i){ return 55 + i*(size)})
 					.attr("width", size)
 					.attr("height", size)
 					.style("fill", function(d){return d})
@@ -151,7 +184,15 @@
 			// create dropdown menu
 			createDropdown(csvData);
 
-			// chartMenu(csvData);
+			// add element to toggle Metro layer
+			toggleMetro();
+
+			// add block at bottom for sources
+			sources = d3.select("body")
+				.append("div")
+				.attr("class", "source")
+			sources.append("text")
+				.text("Sources: Metro shapefile from DCGIS Open Data. All data and other shapefiles from United States Census Bureau.")
 		};
 	};
 
@@ -264,14 +305,14 @@
     		})))
 		legendLabels.enter()
 			.append("text")
-				.attr("x", width - 40)
-				.attr("y", function(d,i){ return 13 + i*15})
+				.attr("x", width - 60)
+				.attr("y", function(d,i){ return 57 + i*15})
 				.style("fill", "#000")
 				.style("font-size", "0.8em")
 				.attr("text-anchor", "left")
 				.style("alignment-baseline", "middle")
 				.attr("class", "legendlabels")
-				.style("z-index", 97)
+
 		legendLabels
 				.text(function(d) { return d + "%"; })
 		legendLabels.exit().remove();
@@ -340,7 +381,7 @@
 				.attr("x", chartWidth)
 				.attr("y", 28)
 				.style("text-anchor", "end")
-				.text("Median Income ($1000s)");
+				.text("Median Household Income ($1000s)");
 
 		// add y-axis
 		chart.append("g")
@@ -392,63 +433,24 @@
 			.attr("y", 10)
 			.attr("class", "chartTitle")
 
+		var chartInfo = chart.append("text")
+			.attr("x", 25)
+			.attr("y", 30)
+			.attr("class", "chartInfo")
+
 		// set dot positions and colors
 		updateChart(dots, colorScale);
 	};
 
-	// // function to create a menu for chart
-	// function chartMenu(data){
-
-	// 	// add select element
-	// 	var menu = d3.select("chart")
-	// 		.append("select")
-	// 		.attr("class", "dropdown")
-
-	// 		// listen for a change in dropdown and change attribute
-	// 		.on("change", function(){
-	// 			changeMenu(this.value, data)
-	// 		});
-
-	// 	// add initial option
-	// 	var titleOption = menu.append("option")
-	// 		.attr("class", "title-option")
-	// 		.attr("disabled", "true")
-	// 		.text("Select attribute");
-
-	// 	// add attribute value name options
-	// 	var attrOptions = menu.selectAll("attrOptions")
-	// 		.data(infoArray)
-	// 		.enter()
-	// 		.append("option")
-	// 		.attr("class", "data-option")
-	// 		.attr("value", function(d){ return d })
-	// 		.text(function(d){ return prettyString(d) });
-	// };
-
-	// // dropdown change listener handler
-	// function changeMenu(attribute, data){
-
-	// 	// change the expressed attribute
-	// 	chartAttribute = attribute;
-
-	// 	// re-position x-value
-	// 	var dots = d3.selectAll(".dot")
-
-	// 		//re-position x-value
-	// 		.attr("cx", xMap)
-	// };
-
 	// function to create a dropdown menu for attribute selection
-	function createDropdown(data){
+	function createDropdown(csvData){
 
 		// add select element
-		var dropdown = d3.select("body")
-			.append("select")
-			.attr("class", "dropdown")
+		var dropdown = d3.select("#dropdown")
 
 			// listen for a change in dropdown and change attribute
 			.on("change", function(){
-				changeAttribute(this.value, data)
+				changeAttribute(this.value, csvData)
 			});
 
 		// add initial option
@@ -468,13 +470,13 @@
 	};
 
 	// dropdown change listener handler
-	function changeAttribute(attribute, data){
+	function changeAttribute(attribute, csvData){
 
 		// change the expressed attribute
 		expressed = attribute;
 
 		// recreate the color scale
-		var colorScale = makeColorScale(data);
+		var colorScale = makeColorScale(csvData);
 
 		// recolor enumeration units
 		var censustracts = d3.selectAll(".censustracts")
@@ -510,7 +512,9 @@
 		// add text to chart title
 		var chartTitle = d3.select(".chartTitle")
 			// create a string that includes the current attribute name
-			.text(prettyString(expressed))
+			.text("Wealth of commuters who")
+		var chartInfo = d3.select(".chartInfo")
+			.text(prettyString(expressed).toLowerCase())
 	}
 
 	// function to highlight tracts
@@ -709,5 +713,18 @@
 		splitString = string.split('_').join(' ')
     	return splitString.charAt(0).toUpperCase() + splitString.slice(1);
 	}
+
+	// function to toggle metro
+	function toggleMetro() {
+		var metroCheckbox = document.querySelector('input[id="metro_toggle"]');
+
+	    metroCheckbox.onchange = function() {
+	    	if(this.checked) {
+	    		d3.selectAll(".metrolines").attr("visibility", "hidden");
+	   		} else {
+	    		d3.selectAll(".metrolines").attr("visibility", "visible");
+	        }
+    	};
+	};
 
 })();

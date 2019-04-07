@@ -1,4 +1,4 @@
-GEOID,Geography,median_income,distance_to_metro,drive_alone,carpool,public_transit,bicycle,walk,work_from_home
+GEOID,Geography,median_income,distance_to_metro,drive_alone,carpool,ride_public_transit,bicycle,walk,work_from_home
 11001000100,"Census Tract 1, Washington, D.C.",168.477,0.5658132982,32.4,2.2,17.7,8.6,21.1,13.8
 11001000201,"Census Tract 2.01, Washington, D.C.",,0.8723435125,1.2,3.1,3.8,0.0,76.6,8.3
 11001000202,"Census Tract 2.02, Washington, D.C.",162.981,0.5696664701,24.5,1.4,26.5,5.2,34.8,6.6
