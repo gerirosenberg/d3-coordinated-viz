@@ -5,10 +5,14 @@
 
 	// psuedo-global variables
 	var attrArray = ["drive_alone", "carpool", "public_transit", "bicycle", "walk", "work_from_home"];
-	var infoArray = ["median_income", "distance_to_metro"];
+	var infoArray = ["median_income"];
 
 	// initial attribute
 	var expressed = attrArray[0];
+
+	// map frame dimensions
+	var width = window.innerWidth * 0.5,
+	height = 460;
 
 	// chart frame dimensons
 	var margin = {top: 20, right: 20, bottom: 30, left: 40},
@@ -21,9 +25,19 @@
 	yScale = d3.scale.linear()
 		.range([chartHeight, 0]);
 
+	// setup color classes
+	var colorClasses = [
+		"#edf8fb",
+		"#b3cde3",
+		"#8c96c6",
+		"#8856a7",
+		"#810f7c"
+	];
+
+	var chartAttribute = infoArray[0];
 
 	// setup x and y values
-	var xValue = function(d) { return Number(d.median_income);},
+	var xValue = function(d) { return Number(d[chartAttribute]);},
 		xMap = function(d) { return xScale(xValue(d));},
 		yValue = function(d) { return Number(d[expressed]);},
 		yMap = function(d) { return yScale(yValue(d));};
@@ -34,24 +48,20 @@
 	// set up choropleth map
 	function setMap(){
 
-		// map frame dimensions
-		var width = window.innerWidth * 0.5,
-		height = 460;
-
 		// create new svg container for the map
 		var map = d3.select("body")
-		.append("svg")
-		.attr("class", "map")
-		.attr("width", width)
-		.attr("height", height);
+			.append("svg")
+			.attr("class", "map")
+			.attr("width", width)
+			.attr("height", height);
 
 		// create equal area conic conformal projection
 		var projection = d3.geoConicConformal()
-		.center([-0.08, 38.95])
-		.rotate([77, 0])
-		.parallels([38.3, 39.45])
-		.scale(30000)
-		.translate([width / 2, height / 2]);
+			.center([-0.08, 38.95])
+			.rotate([77, 0])
+			.parallels([38.3, 39.45])
+			.scale(30000)
+			.translate([width / 2, height / 2]);
 
 		// path generator
 		var path = d3.geoPath()
@@ -86,6 +96,10 @@
 				.attr("class", "countiesbg")
 				.attr("d", path);
 
+			// add county labels to map
+			setCountyLabels(linesCounties.features, projection, map);
+			setCountyBgLabels(allCounties.features, projection, map);
+
 			// join csv data to geoJSON enumeration units
 			allTracts = joinData(allTracts, csvData);
 
@@ -110,8 +124,34 @@
 				.attr("class", "statelines")
 				.attr("d", path);
 
+			// add legend background
+			map.append("rect")
+					.attr("x", width - 68)
+					.attr("y", 3)
+					.attr("width", 65)
+					.attr("height", 94)
+					.style("fill", "#FFF")
+					.style("opacity", "0.4")
+					.style("z-index", 95)
+
+			// make legend squares
+			var size = 15
+			map.selectAll("mysquares")
+				.data(colorClasses)
+				.enter()
+				.append("rect")
+					.attr("x", width - 60)
+					.attr("y", function(d,i){ return 13 + i*(size)})
+					.attr("width", size)
+					.attr("height", size)
+					.style("fill", function(d){return d})
+					.attr("class", "mysquares")
+					.style("z-index", 96)
+
 			// create dropdown menu
 			createDropdown(csvData);
+
+			// chartMenu(csvData);
 		};
 	};
 
@@ -197,27 +237,51 @@
 
 	// function to create color scale generator
 	function makeColorScale(data){
-		var colorClasses = [
-			"#edf8fb",
-			"#b3cde3",
-			"#8c96c6",
-			"#8856a7",
-			"#810f7c"
-		];
 
 		// create color scale generator
-		var colorScale = d3.scale.quantile()
+		var colorScale = d3.scale.threshold()
 			.range(colorClasses);
 
 		// build array of all values of the expressed attribute
-			var domainArray = [];
-			for (var i=0; i<data.length; i++){
-				var val = parseFloat(data[i][expressed]);
-				domainArray.push(val);
-			};
+		var domainArray = [];
+		for (var i=0; i<data.length; i++){
+			var val = parseFloat(data[i][expressed]);
+			domainArray.push(val);
+		};
 
-		// assign array of expressed values as scale domain
-		colorScale.domain(domainArray);
+	   	//cluster data using ckmeans clustering algorithm to create natural breaks
+	    var clusters = ss.ckmeans(domainArray, 5);
+	    
+	    //reset domain array to cluster minimums
+	    domainArray = clusters.map(function(d){
+	        return d3.min(d);
+	    });
+
+	    // make legend labels
+		var legendLabels = d3.select(".map").selectAll(".legendlabels")
+			.data([0].concat(clusters.map(function(d){
+    			return d3.max(d);
+    		})))
+		legendLabels.enter()
+			.append("text")
+				.attr("x", width - 40)
+				.attr("y", function(d,i){ return 13 + i*15})
+				.style("fill", "#000")
+				.style("font-size", "0.8em")
+				.attr("text-anchor", "left")
+				.style("alignment-baseline", "middle")
+				.attr("class", "legendlabels")
+				.style("z-index", 97)
+		legendLabels
+				.text(function(d) { return d + "%"; })
+		legendLabels.exit().remove();
+
+	    //remove first value from domain array to create class breakpoints
+	    domainArray.shift();
+
+	    //assign array of last 4 cluster minimums as domain
+	    colorScale.domain(domainArray);
+
 		return colorScale;
 	}
 
@@ -274,7 +338,7 @@
 			.append("text")
 				.attr("class", "label")
 				.attr("x", chartWidth)
-				.attr("y", -6)
+				.attr("y", 28)
 				.style("text-anchor", "end")
 				.text("Median Income ($1000s)");
 
@@ -297,7 +361,7 @@
 				.attr("class", function(d) {
 					return "dot id" + Object.values(d)[0];
 				})
-				.attr("r", 3.5)
+				.attr("r", 3)
 				.attr("cx", xMap)
 				.attr("cy", yMap)
 				.style("fill", function(d){
@@ -324,16 +388,58 @@
 
 		// create a text element for the chart title
 		var chartTitle = chart.append("text")
-			.attr("x", 20)
-			.attr("y", 40)
+			.attr("x", 25)
+			.attr("y", 10)
 			.attr("class", "chartTitle")
 
 		// set dot positions and colors
 		updateChart(dots, colorScale);
 	};
 
+	// // function to create a menu for chart
+	// function chartMenu(data){
+
+	// 	// add select element
+	// 	var menu = d3.select("chart")
+	// 		.append("select")
+	// 		.attr("class", "dropdown")
+
+	// 		// listen for a change in dropdown and change attribute
+	// 		.on("change", function(){
+	// 			changeMenu(this.value, data)
+	// 		});
+
+	// 	// add initial option
+	// 	var titleOption = menu.append("option")
+	// 		.attr("class", "title-option")
+	// 		.attr("disabled", "true")
+	// 		.text("Select attribute");
+
+	// 	// add attribute value name options
+	// 	var attrOptions = menu.selectAll("attrOptions")
+	// 		.data(infoArray)
+	// 		.enter()
+	// 		.append("option")
+	// 		.attr("class", "data-option")
+	// 		.attr("value", function(d){ return d })
+	// 		.text(function(d){ return prettyString(d) });
+	// };
+
+	// // dropdown change listener handler
+	// function changeMenu(attribute, data){
+
+	// 	// change the expressed attribute
+	// 	chartAttribute = attribute;
+
+	// 	// re-position x-value
+	// 	var dots = d3.selectAll(".dot")
+
+	// 		//re-position x-value
+	// 		.attr("cx", xMap)
+	// };
+
 	// function to create a dropdown menu for attribute selection
-	function createDropdown(csvData){
+	function createDropdown(data){
 
 		// add select element
 		var dropdown = d3.select("body")
@@ -342,32 +448,33 @@
 
 			// listen for a change in dropdown and change attribute
 			.on("change", function(){
-				changeAttribute(this.value, csvData)
+				changeAttribute(this.value, data)
 			});
 
 		// add initial option
 		var titleOption = dropdown.append("option")
-			.attr("class", "titleOption")
+			.attr("class", "title-option")
 			.attr("disabled", "true")
-			.text("Select transportation to work");
+			.text("Select transportation");
 
 		// add attribute value name options
 		var attrOptions = dropdown.selectAll("attrOptions")
 			.data(attrArray)
 			.enter()
 			.append("option")
+			.attr("class", "data-option")
 			.attr("value", function(d){ return d })
-			.text(function(d){ return d });
+			.text(function(d){ return prettyString(d) });
 	};
 
 	// dropdown change listener handler
-	function changeAttribute(attribute, csvData){
+	function changeAttribute(attribute, data){
 
 		// change the expressed attribute
 		expressed = attribute;
 
 		// recreate the color scale
-		var colorScale = makeColorScale(csvData);
+		var colorScale = makeColorScale(data);
 
 		// recolor enumeration units
 		var censustracts = d3.selectAll(".censustracts")
@@ -403,7 +510,7 @@
 		// add text to chart title
 		var chartTitle = d3.select(".chartTitle")
 			// create a string that includes the current attribute name
-			.text("Percent " + expressed)
+			.text(prettyString(expressed))
 	}
 
 	// function to highlight tracts
@@ -439,12 +546,8 @@
 	// function to reset the tract style on mouseout
 	function dehighlightTracts(props){
 		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
-			.style("stroke", function(){
-				return getStyle(this, "stroke")
-			})
-			.style("stroke-width", function(){
-				return getStyle(this, "stroke-width")
-			});
+			.style("stroke", "#CDD1D6")
+			.style("stroke-width", "0.2px");
 
 		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
 			.style("stroke", "#000")
@@ -501,8 +604,7 @@
 		var income = Math.round(1000 * props["median_income"]) || String("?");
 
 		// label content
-	 	var labelAttribute = "<h1>" + props[expressed] + "%</h1><b>" + expressed + "</b><br/><h2>$" + income + " median income (" + props.NAMELSAD + ")</h2>"
-		 	// hide median income where unavailable
+	 	var labelAttribute = "<h1>" + props[expressed] + "%</h1><b>" + prettyString(expressed) + "</b><br/>$" + income.toLocaleString('en') + " Median Income</br>" + props.NAMELSAD + "</br>" + props.COUNTYFP + ", " + props.STATEFP;
 
 	 	// create info label div
 	 	var infolabel = d3.select("body")
@@ -521,10 +623,12 @@
 
 		// pare down tract name
 		var longTract = props["Geography"];
-		var shortTract = longTract.substr(0, longTract.indexOf(","));
+		var shortTract = longTract.split(",")[0];
+		var tractCity = longTract.split(",")[1];
+		var tractState = longTract.split(",")[2];
 
 		// label content
-	 	var labelAttribute = "<h1>" + yValue(props) + "%</h1><b>" + expressed + "</b><br/><h2>$" + Math.round(1000 * xValue(props)) + " median income (" + shortTract + ")</h2>";
+	 	var labelAttribute = "<h1>" + yValue(props) + "%</h1><b>" + prettyString(expressed) + "</b><br/>$" + Math.round(1000 * xValue(props)).toLocaleString('en') + " Median Income<br/>" + shortTract + "<br/>" + tractCity + ", " + tractState;
 
 	 	// create info label div
 	 	var infolabel = d3.select("body")
@@ -563,5 +667,47 @@
 			.style("left", x + "px")
 			.style("top", y + "px");
 	};
+
+	// function to add labels for DC region counties
+	function setCountyLabels(labelData, projection, map){
+		
+		var labels = map.selectAll('text.label').data(labelData);
+
+	    labels.enter().append('text')
+	        .classed('label', true)
+	        .attr("class", "countylabel noselect");
+
+	    labels
+	        .attr('x', function(d) { return projection(d3.geo.centroid(d))[0]; })
+	        .attr('y', function(d) { return projection(d3.geo.centroid(d))[1] + 10; })
+	        .text(function(d) { return d.properties.NAMELSAD })
+	        .style("text-anchor", "middle");
+
+	    labels.exit().remove();
+	};
+
+	// function to add labels for all other counties
+	function setCountyBgLabels(labelData, projection, map){
+		
+		var labels = map.selectAll('text.label').data(labelData);
+
+	    labels.enter().append('text')
+	        .classed('label', true)
+	        .attr("class", "countybglabel noselect");
+
+	    labels
+	        .attr('x', function(d) { return projection(d3.geo.centroid(d))[0]; })
+	        .attr('y', function(d) { return projection(d3.geo.centroid(d))[1] + 10; })
+	        .text(function(d) { return d.properties.NAMELSAD })
+	        .style("text-anchor", "middle");
+
+	    labels.exit().remove();
+	};
+
+	// function to capitalize first letter of attributes
+	function prettyString(string) {
+		splitString = string.split('_').join(' ')
+    	return splitString.charAt(0).toUpperCase() + splitString.slice(1);
+	}
 
 })();
