@@ -3,6 +3,7 @@
 // local scope
 (function(){
 
+	// function to join census tracts and csv
 	function joinData(allTracts, csvData){
 		// loop through csv to assign each set of csv attribute values to geojson tract
 		for (var i=0; i<csvData.length; i++){
@@ -357,13 +358,18 @@
 	// function to reset the tract style on mouseout
 	function dehighlightTracts(props){
 		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
-			.style("stroke", "#CDD1D6")
+			.style("stroke", "#FFF")
 			.style("stroke-width", "0.2px");
 
 		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
 			.style("stroke", "#000")
+<<<<<<< HEAD
 			.style("stroke-width", "1")
 			.style("stroke-opacity", "0.3");
+=======
+			.style("stroke-opacity", "0.3")
+			.style("stroke-width", "1");
+>>>>>>> gh-pages
 
 		function getStyle(element, styleName){
 			var styleText = d3.select(element)
@@ -383,13 +389,22 @@
 	// function to reset the dot style on mouseout
 	function dehighlightDots(props){
 		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
+<<<<<<< HEAD
 			.style("stroke", "#CDD1D6")
+=======
+			.style("stroke", "#FFF")
+>>>>>>> gh-pages
 			.style("stroke-width", "0.2px");
 
 		var selectedDots = d3.selectAll(".dot.id" + Object.values(props)[0])
 			.style("stroke", "#000")
+<<<<<<< HEAD
 			.style("stroke-width", "1")
 			.style("stroke-opacity", "0.3");
+=======
+			.style("stroke-opacity", "0.3")
+			.style("stroke-width", "1")
+>>>>>>> gh-pages
 
 		function getStyle(element, styleName){
 			var styleText = d3.select(element)
