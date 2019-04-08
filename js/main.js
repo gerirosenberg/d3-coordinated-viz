@@ -552,12 +552,13 @@
 	// function to reset the tract style on mouseout
 	function dehighlightTracts(props){
 		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
-			.style("stroke", "#CDD1D6")
+			.style("stroke", "#FFF")
 			.style("stroke-width", "0.2px");
 
 		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
 			.style("stroke", "#000")
-			.style("stroke-width", "1");
+			.style("stroke-opacity", "0.3")
+			.style("stroke-width", "1")
 
 		function getStyle(element, styleName){
 			var styleText = d3.select(element)
@@ -577,16 +578,13 @@
 	// function to reset the dot style on mouseout
 	function dehighlightDots(props){
 		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
-			.style("stroke", function(){
-				return getStyle(this, "stroke")
-			})
-			.style("stroke-width", function(){
-				return getStyle(this, "stroke-width")
-			});
+			.style("stroke", "#FFF")
+			.style("stroke-width", "0.2px");
 
 		var selectedDots = d3.selectAll(".dot.id" + Object.values(props)[0])
 			.style("stroke", "#000")
-			.style("stroke-width", "1");
+			.style("stroke-opacity", "0.3")
+			.style("stroke-width", "1")
 
 		function getStyle(element, styleName){
 			var styleText = d3.select(element)
