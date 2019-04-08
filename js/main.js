@@ -558,7 +558,7 @@
 		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
 			.style("stroke", "#000")
 			.style("stroke-opacity", "0.3")
-			.style("stroke-width", "1")
+			.style("stroke-width", "1");
 
 		function getStyle(element, styleName){
 			var styleText = d3.select(element)
