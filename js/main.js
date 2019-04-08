@@ -3,201 +3,6 @@
 // local scope
 (function(){
 
-	// psuedo-global variables
-	var attrArray = ["drive_alone", "carpool", "ride_public_transit", "bicycle", "walk", "work_from_home"];
-	var infoArray = ["median_income"];
-
-	// initial attribute
-	var expressed = attrArray[0];
-
-	// map frame dimensions
-	var width = window.innerWidth * 0.5,
-	height = 460;
-
-	// chart frame dimensons
-	var margin = {top: 20, right: 20, bottom: 30, left: 40},
-		chartWidth = window.innerWidth * 0.425 - margin.left - margin.right,
-		chartHeight = 473 - margin.top - margin.bottom;
-
-	// set chart scales
-	xScale = d3.scale.linear()
-		.range([0, chartWidth]),
-	yScale = d3.scale.linear()
-		.range([chartHeight, 0]);
-
-	// setup color classes
-	var colorClasses = [
-		"#edf8fb",
-		"#b3cde3",
-		"#8c96c6",
-		"#8856a7",
-		"#810f7c"
-	];
-
-	var chartAttribute = infoArray[0];
-
-	// setup x and y values
-	var xValue = function(d) { return Number(d[chartAttribute]);},
-		xMap = function(d) { return xScale(xValue(d));},
-		yValue = function(d) { return Number(d[expressed]);},
-		yMap = function(d) { return yScale(yValue(d));};
-
-	// begin script when window loads
-	window.onload = setMap();
-
-	// set up choropleth map
-	function setMap(){
-
-		// create new svg container for the map
-		var map = d3.select("body")
-			.append("svg")
-			.attr("class", "map")
-			.attr("width", width)
-			.attr("height", height);
-
-		// create equal area conic conformal projection
-		var projection = d3.geoConicConformal()
-			.center([-0.08, 38.95])
-			.rotate([77, 0])
-			.parallels([38.3, 39.45])
-			.scale(30000)
-			.translate([width / 2, height / 2]);
-
-		// path generator
-		var path = d3.geoPath()
-			.projection(projection);
-
-		// use queue to parallelize asynchronous data loading
-		d3.queue()
-			// load attributes from csv
-			.defer(d3.csv, "data/income_dist.csv")
-			// load background spatial data
-			.defer(d3.json, "data/allcounties.topojson")
-			// load choropleth spatial data
-			.defer(d3.json, "data/tracts.topojson")
-			// // load county outlines
-			.defer(d3.json, "data/countyoutlines.topojson")
-			// load state outlines
-			.defer(d3.json, "data/stateoutlines.topojson")
-			// load metro lines
-			.defer(d3.json, "data/metro.topojson")
-			.await(callback);
-
-		// add callback function
-		function callback(error, csvData, counties, dctracts, countyOutlines, stateOutlines, metroLines){
-
-			// translate topoJSON
-			var allCounties = topojson.feature(counties, counties.objects.dccounties),
-				allTracts = topojson.feature(dctracts, dctracts.objects.tracts).features,
-				linesCounties = topojson.feature(countyOutlines, countyOutlines.objects.countylines),
-				linesStates = topojson.feature(stateOutlines, stateOutlines.objects.states);
-				lineMetro = topojson.feature(metroLines, metroLines.objects.Metro_Lines_Regional)
-
-			// add counties to map background
-			var countiesbg = map.append("path")
-				.datum(allCounties)
-				.attr("class", "countiesbg")
-				.attr("d", path);
-
-			var metrobg = map.append("path")
-				.datum(lineMetro)
-				.attr("class", "metrolines")
-				.attr("visibility", "hidden")
-				.attr("d", path);
-
-			// add county labels to map
-			setCountyLabels(linesCounties.features, projection, map);
-			setCountyBgLabels(allCounties.features, projection, map);
-
-			// join csv data to geoJSON enumeration units
-			allTracts = joinData(allTracts, csvData);
-
-			// add legend background
-			map.append("rect")
-				.attr("x", width - 98)
-				.attr("y", 0)
-				.attr("width", 98)
-				.attr("height", 143)
-				.style("fill", "#FFF")
-				.style("opacity", "0.4")
-
-			// create the color scale
-			var colorScale = makeColorScale(csvData);
-
-			// add enumeration units to the map
-			setEnumerationUnits(allTracts, map, path, colorScale);
-
-			// add coordinated visualization to the map
-			setChart(csvData, colorScale);
-
-			// add county lines to map
-			var countylines = map.append("path")
-				.datum(linesCounties)
-				.attr("class", "countylines")
-				.attr("d", path);
-
-			// add state lines to map
-			var statelines = map.append("path")
-				.datum(linesStates)
-				.attr("class", "statelines")
-				.attr("d", path);
-
-			// add legend title
-
-			map.append("text")
-				.attr("x", width-90)
-				.attr("y", 16)
-				.style("font-weight", "bold")
-				.style("font-family", "sans-serif")
-				.style("font-size", "0.8em")
-				.text("Percent of")
-
-			map.append("text")
-				.attr("x", width-90)
-				.attr("y", 28)
-				.style("font-weight", "bold")
-				.style("font-family", "sans-serif")
-				.style("font-size", "0.8em")
-				.text("commuters in")
-
-			map.append("text")
-				.attr("x", width-90)
-				.attr("y", 43)
-				.style("font-weight", "bold")
-				.style("font-family", "sans-serif")
-				.style("font-size", "0.8em")
-				.text("census tract")
-
-
-			// make legend squares
-			var size = 15
-			map.selectAll("mysquares")
-				.data(colorClasses)
-				.enter()
-				.append("rect")
-					.attr("x", width - 80)
-					.attr("y", function(d,i){ return 55 + i*(size)})
-					.attr("width", size)
-					.attr("height", size)
-					.style("fill", function(d){return d})
-					.attr("class", "mysquares")
-					.style("z-index", 96)
-
-			// create dropdown menu
-			createDropdown(csvData);
-
-			// add element to toggle Metro layer
-			toggleMetro();
-
-			// add block at bottom for sources
-			sources = d3.select("body")
-				.append("div")
-				.attr("class", "source")
-			sources.append("span")
-				.text("Sources: Metro shapefile from DCGIS Open Data. All data and other shapefiles from United States Census Bureau.")
-		};
-	};
-
 	function joinData(allTracts, csvData){
 		// loop through csv to assign each set of csv attribute values to geojson tract
 		for (var i=0; i<csvData.length; i++){
@@ -557,7 +362,8 @@
 
 		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
 			.style("stroke", "#000")
-			.style("stroke-width", "1");
+			.style("stroke-width", "1")
+			.style("stroke-opacity", "0.3");
 
 		function getStyle(element, styleName){
 			var styleText = d3.select(element)
@@ -577,16 +383,13 @@
 	// function to reset the dot style on mouseout
 	function dehighlightDots(props){
 		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
-			.style("stroke", function(){
-				return getStyle(this, "stroke")
-			})
-			.style("stroke-width", function(){
-				return getStyle(this, "stroke-width")
-			});
+			.style("stroke", "#CDD1D6")
+			.style("stroke-width", "0.2px");
 
 		var selectedDots = d3.selectAll(".dot.id" + Object.values(props)[0])
 			.style("stroke", "#000")
-			.style("stroke-width", "1");
+			.style("stroke-width", "1")
+			.style("stroke-opacity", "0.3");
 
 		function getStyle(element, styleName){
 			var styleText = d3.select(element)
@@ -727,6 +530,201 @@
 	    		d3.selectAll(".metrolines").attr("visibility", "hidden");
 	        }
     	};
+	};
+
+	// psuedo-global variables
+	var attrArray = ["drive_alone", "carpool", "ride_public_transit", "bicycle", "walk", "work_from_home"];
+	var infoArray = ["median_income"];
+
+	// initial attribute
+	var expressed = attrArray[0];
+
+	// map frame dimensions
+	var width = window.innerWidth * 0.5,
+	height = 460;
+
+	// chart frame dimensons
+	var margin = {top: 20, right: 20, bottom: 30, left: 40},
+		chartWidth = window.innerWidth * 0.425 - margin.left - margin.right,
+		chartHeight = 473 - margin.top - margin.bottom;
+
+	// set chart scales
+	xScale = d3.scale.linear()
+		.range([0, chartWidth]),
+	yScale = d3.scale.linear()
+		.range([chartHeight, 0]);
+
+	// setup color classes
+	var colorClasses = [
+		"#edf8fb",
+		"#b3cde3",
+		"#8c96c6",
+		"#8856a7",
+		"#810f7c"
+	];
+
+	var chartAttribute = infoArray[0];
+
+	// setup x and y values
+	var xValue = function(d) { return Number(d[chartAttribute]);},
+		xMap = function(d) { return xScale(xValue(d));},
+		yValue = function(d) { return Number(d[expressed]);},
+		yMap = function(d) { return yScale(yValue(d));};
+
+	// begin script when window loads
+	window.onload = setMap();
+
+	// set up choropleth map
+	function setMap(){
+
+		// create new svg container for the map
+		var map = d3.select("body")
+			.append("svg")
+			.attr("class", "map")
+			.attr("width", width)
+			.attr("height", height);
+
+		// create equal area conic conformal projection
+		var projection = d3.geoConicConformal()
+			.center([-0.08, 38.95])
+			.rotate([77, 0])
+			.parallels([38.3, 39.45])
+			.scale(30000)
+			.translate([width / 2, height / 2]);
+
+		// path generator
+		var path = d3.geoPath()
+			.projection(projection);
+
+		// use queue to parallelize asynchronous data loading
+		d3.queue()
+			// load attributes from csv
+			.defer(d3.csv, "data/income_dist.csv")
+			// load background spatial data
+			.defer(d3.json, "data/allcounties.topojson")
+			// load choropleth spatial data
+			.defer(d3.json, "data/tracts.topojson")
+			// // load county outlines
+			.defer(d3.json, "data/countyoutlines.topojson")
+			// load state outlines
+			.defer(d3.json, "data/stateoutlines.topojson")
+			// load metro lines
+			.defer(d3.json, "data/metro.topojson")
+			.await(callback);
+
+		// add callback function
+		function callback(error, csvData, counties, dctracts, countyOutlines, stateOutlines, metroLines){
+
+			// translate topoJSON
+			var allCounties = topojson.feature(counties, counties.objects.dccounties),
+				allTracts = topojson.feature(dctracts, dctracts.objects.tracts).features,
+				linesCounties = topojson.feature(countyOutlines, countyOutlines.objects.countylines),
+				linesStates = topojson.feature(stateOutlines, stateOutlines.objects.states);
+				lineMetro = topojson.feature(metroLines, metroLines.objects.Metro_Lines_Regional)
+
+			// add counties to map background
+			var countiesbg = map.append("path")
+				.datum(allCounties)
+				.attr("class", "countiesbg")
+				.attr("d", path);
+
+			var metrobg = map.append("path")
+				.datum(lineMetro)
+				.attr("class", "metrolines")
+				.attr("visibility", "hidden")
+				.attr("d", path);
+
+			// add county labels to map
+			setCountyLabels(linesCounties.features, projection, map);
+			setCountyBgLabels(allCounties.features, projection, map);
+
+			// join csv data to geoJSON enumeration units
+			allTracts = joinData(allTracts, csvData);
+
+			// add legend background
+			map.append("rect")
+				.attr("x", width - 98)
+				.attr("y", 0)
+				.attr("width", 98)
+				.attr("height", 143)
+				.style("fill", "#FFF")
+				.style("opacity", "0.4")
+
+			// create the color scale
+			var colorScale = makeColorScale(csvData);
+
+			// add enumeration units to the map
+			setEnumerationUnits(allTracts, map, path, colorScale);
+
+			// add coordinated visualization to the map
+			setChart(csvData, colorScale);
+
+			// add county lines to map
+			var countylines = map.append("path")
+				.datum(linesCounties)
+				.attr("class", "countylines")
+				.attr("d", path);
+
+			// add state lines to map
+			var statelines = map.append("path")
+				.datum(linesStates)
+				.attr("class", "statelines")
+				.attr("d", path);
+
+			// add legend title
+
+			map.append("text")
+				.attr("x", width-90)
+				.attr("y", 16)
+				.style("font-weight", "bold")
+				.style("font-family", "sans-serif")
+				.style("font-size", "0.8em")
+				.text("Percent of")
+
+			map.append("text")
+				.attr("x", width-90)
+				.attr("y", 28)
+				.style("font-weight", "bold")
+				.style("font-family", "sans-serif")
+				.style("font-size", "0.8em")
+				.text("commuters in")
+
+			map.append("text")
+				.attr("x", width-90)
+				.attr("y", 43)
+				.style("font-weight", "bold")
+				.style("font-family", "sans-serif")
+				.style("font-size", "0.8em")
+				.text("census tract")
+
+
+			// make legend squares
+			var size = 15
+			map.selectAll("mysquares")
+				.data(colorClasses)
+				.enter()
+				.append("rect")
+					.attr("x", width - 80)
+					.attr("y", function(d,i){ return 55 + i*(size)})
+					.attr("width", size)
+					.attr("height", size)
+					.style("fill", function(d){return d})
+					.attr("class", "mysquares")
+					.style("z-index", 96)
+
+			// create dropdown menu
+			createDropdown(csvData);
+
+			// add element to toggle Metro layer
+			toggleMetro();
+
+			// add block at bottom for sources
+			sources = d3.select("body")
+				.append("div")
+				.attr("class", "source")
+			sources.append("span")
+				.text("Sources: Metro shapefile from DCGIS Open Data. All data and other shapefiles from United States Census Bureau.")
+		};
 	};
 
 })();
