@@ -86,6 +86,7 @@
 
 .dot{
 	stroke: #000;
+	stroke-opacity: 0.3;
 	opacity: 0.7;
 }
 
@@ -106,7 +107,7 @@
 	margin: 0 20px 0 0;
 	padding: 0;
 	display: inline-block;
-	font-family: serif;
+	font-family: sans-serif;
 }
 
 .numbers {
@@ -125,7 +126,7 @@
 	border-radius: 0px;
     border: 1px solid rgba(0,0,0,0.15);
     box-shadow: 0 1px 1px rgba(50,50,50,0.1);
-    color: #8AA8BD;
+    color: #000;
 }
 
 .countylabel {
@@ -159,23 +160,22 @@
                                   supported by Chrome and Opera */
 }
 
-@media all and (min-width:830px) {
-	.desktop-br {display: inline;}
-	.mobile-br {display: none;}
-}
-
-@media all and (max-width:830px) {
-	.desktop-br {display: none;}
-	.mobile-br {display: inline;}
+@media all and (min-width:850px) {
+	.map {
+		margin-left: 0;
+	}
+	.chart {
+		margin-left: 0;
+	}
 }
 
 
 .source {
 	padding-left: 20px;
 	padding-top: 10px;
-	float: bottom;
 	font-size: 0.7em;
-	font-style: sans-serif;
+	font-family: sans-serif;
+	display: inline-block;
 }
 
 .pagetitle {
@@ -197,6 +197,21 @@
 	font-size: 0.8em;
 	display: block;
 	text-align: justify;
+}
+
+/* unvisited link */
+.topinfo a:link {
+  color: #FFF;
+}
+
+/* visited link */
+.topinfo a:visited {
+  color: #FFF;
+}
+
+/* mouse over link */
+.topinfo a:hover {
+  color: #000;
 }
 
 .instr {
@@ -227,6 +242,7 @@
 .switchinfo {
 	padding-left: 5px;
 	padding-top: 2px;
+	color: #000;
 }
 
 /* Hide default HTML checkbox */

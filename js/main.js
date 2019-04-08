@@ -102,6 +102,7 @@
 			var metrobg = map.append("path")
 				.datum(lineMetro)
 				.attr("class", "metrolines")
+				.attr("visibility", "hidden")
 				.attr("d", path);
 
 			// add county labels to map
@@ -110,6 +111,15 @@
 
 			// join csv data to geoJSON enumeration units
 			allTracts = joinData(allTracts, csvData);
+
+			// add legend background
+			map.append("rect")
+				.attr("x", width - 98)
+				.attr("y", 0)
+				.attr("width", 98)
+				.attr("height", 143)
+				.style("fill", "#FFF")
+				.style("opacity", "0.4")
 
 			// create the color scale
 			var colorScale = makeColorScale(csvData);
@@ -132,15 +142,7 @@
 				.attr("class", "statelines")
 				.attr("d", path);
 
-			// add legend background and title
-			map.append("rect")
-				.attr("x", width - 98)
-				.attr("y", 0)
-				.attr("width", 98)
-				.attr("height", 140)
-				.style("fill", "#FFF")
-				.style("opacity", "0.4")
-				.style("z-index", 95)
+			// add legend title
 
 			map.append("text")
 				.attr("x", width-90)
@@ -191,7 +193,7 @@
 			sources = d3.select("body")
 				.append("div")
 				.attr("class", "source")
-			sources.append("text")
+			sources.append("span")
 				.text("Sources: Metro shapefile from DCGIS Open Data. All data and other shapefiles from United States Census Bureau.")
 		};
 	};
@@ -311,10 +313,11 @@
 				.style("font-size", "0.8em")
 				.attr("text-anchor", "left")
 				.style("alignment-baseline", "middle")
+				.style("font-family", "sans-serif")
 				.attr("class", "legendlabels")
 
 		legendLabels
-				.text(function(d) { return d + "%"; })
+				.text(function(d) { return Math.round(d) + "%"; })
 		legendLabels.exit().remove();
 
 	    //remove first value from domain array to create class breakpoints
@@ -368,7 +371,7 @@
 				.orient("left");
 
 		// buffer to avoid overlap of axes
-		xScale.domain([d3.min(csvData, xValue)-1, d3.max(csvData, xValue)+1]);
+		xScale.domain([d3.min(csvData, xValue), d3.max(csvData, xValue)+1]);
 		yScale.domain([d3.min(csvData, yValue), d3.max(csvData, yValue)]);
 
 		// add x-axis
@@ -453,12 +456,6 @@
 				changeAttribute(this.value, csvData)
 			});
 
-		// add initial option
-		var titleOption = dropdown.append("option")
-			.attr("class", "title-option")
-			.attr("disabled", "true")
-			.text("Select transportation");
-
 		// add attribute value name options
 		var attrOptions = dropdown.selectAll("attrOptions")
 			.data(attrArray)
@@ -466,6 +463,7 @@
 			.append("option")
 			.attr("class", "data-option")
 			.attr("value", function(d){ return d })
+			.attr("selected", function(d,i) { if (i===0) {return true}})
 			.text(function(d){ return prettyString(d) });
 	};
 
@@ -522,12 +520,14 @@
 
 		// change stroke
 		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
-			.style("stroke", "magenta")
-			.style("stroke-width", "2");
+			.style("stroke", "#000")
+			.style("stroke-width", "2")
+			.style("stroke-opacity", "1");
 
 		var selectedDots = d3.selectAll(".dot.id" + props.GEOID)
-			.style("stroke", "magenta")
-			.style("stroke-width", "1");
+			.style("stroke", "#000")
+			.style("stroke-opacity", "1")
+			.style("stroke-width", "3");
 
 		setTractLabel(props);
 	};
@@ -537,12 +537,14 @@
 
 		// change stroke
 		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
-			.style("stroke", "magenta")
-			.style("stroke-width", "2");
+			.style("stroke", "#000")
+			.style("stroke-width", "2")
+			.style("stroke-opacity", "1");
 
 		var selectedDots = d3.selectAll(".dot.id" + Object.values(props)[0])
-			.style("stroke", "magenta")
-			.style("stroke-width", "1");
+			.style("stroke", "#000")
+			.style("stroke-opacity", "1")
+			.style("stroke-width", "3");
 
 		setDotLabel(props);
 	};
@@ -657,7 +659,7 @@
 
 		// use coordinates of mousemove event to set label coordinates
 		var x1 = d3.event.clientX + 10,
-			y1 = d3.event.clientY - 75,
+			y1 = d3.event.clientY + 75,
 			x2 = d3.event.clientX - labelWidth - 10,
 			y2 = d3.event.clientY + 25;
 
@@ -720,9 +722,9 @@
 
 	    metroCheckbox.onchange = function() {
 	    	if(this.checked) {
-	    		d3.selectAll(".metrolines").attr("visibility", "hidden");
-	   		} else {
 	    		d3.selectAll(".metrolines").attr("visibility", "visible");
+	   		} else {
+	    		d3.selectAll(".metrolines").attr("visibility", "hidden");
 	        }
     	};
 	};
