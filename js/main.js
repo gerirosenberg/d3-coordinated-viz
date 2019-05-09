@@ -285,7 +285,6 @@
 		// recolor enumeration units
 		var censustracts = d3.selectAll(".censustracts")
 			.transition()
-			.duration(1000)
 			.style("fill", function(d){
 				return choropleth(d.properties, colorScale)
 			});
@@ -389,7 +388,7 @@
 	function dehighlightDots(props){
 
 		props.bringToBack();
-		
+
 		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
 			.style("stroke", "#CDD1D6")
 			.style("stroke", "#FFF")
