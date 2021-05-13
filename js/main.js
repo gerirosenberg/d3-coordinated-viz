@@ -149,7 +149,7 @@
 		};
 	};
 
-	// function to create coordinated bar chart
+	// function to create coordinated dot chart
 	function setChart(csvData, colorScale){
 
 		// create a second svg element to hold the chart
@@ -322,7 +322,6 @@
 
 	// function to highlight tracts
 	function highlightTracts(props){
-		props.bringToFront();
 
 		// change stroke
 		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
@@ -340,7 +339,6 @@
 
 	// function to highlight dots
 	function highlightDots(props){
-		props.bringToFront();
 
 		// change stroke
 		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
@@ -358,8 +356,6 @@
 
 	// function to reset the tract style on mouseout
 	function dehighlightTracts(props){
-		props.bringToBack();
-
 		var selectedTracts = d3.selectAll(".censustracts.id" + props.GEOID)
 			.style("stroke", "#FFF")
 			.style("stroke-width", "0.2px");
@@ -386,9 +382,6 @@
 
 	// function to reset the dot style on mouseout
 	function dehighlightDots(props){
-
-		props.bringToBack();
-
 		var selectedTracts = d3.selectAll(".censustracts.id" + Object.values(props)[0])
 			.style("stroke", "#CDD1D6")
 			.style("stroke", "#FFF")
